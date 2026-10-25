@@ -2,10 +2,13 @@
 const STORAGE_KEY = "todos";
 
 let todos = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+// Tasks saved before priorities existed have no priority field; treat them as "mittel".
+todos = todos.map((t) => ({ ...t, priority: t.priority || "mittel" }));
 let filter = "all";
 
 const form = document.getElementById("new-todo-form");
 const input = document.getElementById("new-todo-input");
+const prioritySelect = document.getElementById("new-todo-priority");
 const list = document.getElementById("todo-list");
 const count = document.getElementById("count");
 
@@ -22,6 +25,7 @@ function render() {
 
   for (const todo of visible) {
     const li = document.createElement("li");
+    li.classList.add("priority-" + todo.priority);
     if (todo.done) li.classList.add("done");
 
     const checkbox = document.createElement("input");
@@ -46,7 +50,16 @@ function render() {
       render();
     });
 
-    li.append(checkbox, text, del);
+    li.append(checkbox, text);
+
+    if (todo.priority === "hoch") {
+      const label = document.createElement("small");
+      label.className = "priority-label";
+      label.textContent = "hoch";
+      li.append(label);
+    }
+
+    li.append(del);
     list.append(li);
   }
 
@@ -58,8 +71,9 @@ form.addEventListener("submit", (e) => {
   e.preventDefault();
   const text = input.value.trim();
   if (!text) return;
-  todos.push({ id: Date.now(), text, done: false });
+  todos.push({ id: Date.now(), text, done: false, priority: prioritySelect.value });
   input.value = "";
+  prioritySelect.value = "mittel";
   save();
   render();
 });

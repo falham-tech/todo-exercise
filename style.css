@@ -20,9 +20,11 @@ body {
 h1 { margin-top: 0; }
 
 form { display: flex; gap: 8px; }
+form input[type="text"] { flex: 1; min-width: 0; }
+select { background: #fff; }
 
-input[type="text"] {
-  flex: 1;
+input[type="text"],
+select {
   padding: 10px;
   font-size: 16px;
   border: 1px solid #ccc;
@@ -38,7 +40,7 @@ button {
   cursor: pointer;
 }
 
-form button { background: #4f46e5; color: #fff; border-color: #4f46e5; }
+form button { background: #7b1e3a; color: #fff; border-color: #7b1e3a; }
 
 .filters { display: flex; gap: 6px; margin: 16px 0; }
 .filters .active { background: #222; color: #fff; border-color: #222; }
@@ -55,6 +57,20 @@ li {
 
 li span { flex: 1; }
 li.done span { text-decoration: line-through; color: #999; }
+
+li.priority-hoch {
+  border-left: 4px solid #d9480f;
+  padding-left: 10px;
+  background: #fff4ee;
+}
+
+.priority-label {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #d9480f;
+  color: #fff;
+  font-size: 12px;
+}
 li .delete { border: none; color: #c00; font-size: 18px; }
 
 footer {
