@@ -1,14 +1,25 @@
 // To-dos are saved in the browser's localStorage so they survive a page reload.
 const STORAGE_KEY = "todos";
+// The priority last chosen when adding a task, so the dropdown keeps it.
+const PRIORITY_KEY = "lastPriority";
+// Sort order for the list: lower number comes first.
+const PRIORITY_RANK = { hoch: 0, mittel: 1, niedrig: 2 };
 
 let todos = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-// Tasks saved before priorities existed have no priority field; treat them as "mittel".
-todos = todos.map((t) => ({ ...t, priority: t.priority || "mittel" }));
+// Older tasks may lack these fields: priority defaults to "mittel",
+// prioritySetAt falls back to the id (which is also a Date.now() timestamp).
+todos = todos.map((t) => ({
+  ...t,
+  priority: t.priority || "mittel",
+  prioritySetAt: t.prioritySetAt ?? t.id,
+}));
 let filter = "all";
 
 const form = document.getElementById("new-todo-form");
 const input = document.getElementById("new-todo-input");
 const prioritySelect = document.getElementById("new-todo-priority");
+const lastPriority = localStorage.getItem(PRIORITY_KEY);
+if (Object.hasOwn(PRIORITY_RANK, lastPriority)) prioritySelect.value = lastPriority;
 const list = document.getElementById("todo-list");
 const count = document.getElementById("count");
 
@@ -29,7 +40,7 @@ function startEdit(li, textSpan, todo) {
 
   const editPriority = document.createElement("select");
   editPriority.className = "edit-priority";
-  for (const p of ["hoch", "mittel", "niedrig"]) {
+  for (const p of Object.keys(PRIORITY_RANK)) {
     const option = document.createElement("option");
     option.value = p;
     option.textContent = p;
@@ -51,7 +62,11 @@ function startEdit(li, textSpan, todo) {
     // An empty text leaves the task unchanged.
     if (text) {
       todo.text = text;
-      todo.priority = editPriority.value;
+      // Only a changed priority moves the task; a text-only edit keeps its place.
+      if (editPriority.value !== todo.priority) {
+        todo.priority = editPriority.value;
+        todo.prioritySetAt = Date.now();
+      }
       save();
     }
     render();
@@ -82,6 +97,13 @@ function render() {
 
   const visible = todos.filter((t) =>
     filter === "all" ? true : filter === "done" ? t.done : !t.done
+  );
+  // Open before done, then hoch > mittel > niedrig, then most recently prioritized first.
+  visible.sort(
+    (a, b) =>
+      a.done - b.done ||
+      PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] ||
+      b.prioritySetAt - a.prioritySetAt
   );
 
   for (const todo of visible) {
@@ -117,10 +139,11 @@ function render() {
 
     li.append(checkbox, text);
 
-    if (todo.priority === "hoch") {
+    // "mittel" is the default, so only "hoch" and "niedrig" get a label.
+    if (todo.priority !== "mittel") {
       const label = document.createElement("small");
       label.className = "priority-label";
-      label.textContent = "hoch";
+      label.textContent = todo.priority;
       li.append(label);
     }
 
@@ -136,9 +159,10 @@ form.addEventListener("submit", (e) => {
   e.preventDefault();
   const text = input.value.trim();
   if (!text) return;
-  todos.push({ id: Date.now(), text, done: false, priority: prioritySelect.value });
+  const now = Date.now();
+  todos.push({ id: now, text, done: false, priority: prioritySelect.value, prioritySetAt: now });
   input.value = "";
-  prioritySelect.value = "mittel";
+  localStorage.setItem(PRIORITY_KEY, prioritySelect.value);
   save();
   render();
 });

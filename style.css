@@ -64,6 +64,12 @@ li.priority-hoch {
   background: #fff4ee;
 }
 
+li.priority-niedrig {
+  border-left: 4px solid #868e96;
+  padding-left: 10px;
+  background: #f1f3f5;
+}
+
 .priority-label {
   padding: 2px 8px;
   border-radius: 999px;
@@ -71,6 +77,7 @@ li.priority-hoch {
   color: #fff;
   font-size: 12px;
 }
+li.priority-niedrig .priority-label { background: #868e96; }
 li .delete { border: none; color: #c00; font-size: 18px; }
 
 li:not(.done) span:not(.edit) { cursor: text; }
