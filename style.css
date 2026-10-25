@@ -80,17 +80,24 @@ li.priority-niedrig {
 li.priority-niedrig .priority-label { background: #868e96; }
 li .delete { border: none; color: #c00; font-size: 18px; }
 
-li:not(.done) span:not(.edit) { cursor: text; }
+/* No text selection or iOS callout menu when long-pressing to edit. */
+li:not(.done) span:not(.edit) {
+  cursor: text;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
 
 li .edit { flex: 1; display: flex; gap: 6px; min-width: 0; }
 li .edit-input {
   flex: 1;
   min-width: 0;
   padding: 4px 8px;
-  font-size: inherit;
+  /* Safari on iPhone zooms into fields with less than 16px text. */
+  font-size: 16px;
   border-color: #7b1e3a;
 }
-li .edit-priority { padding: 4px 6px; font-size: 14px; }
+li .edit-priority { padding: 4px 6px; font-size: 16px; }
 li .edit-input:focus,
 li .edit-priority:focus { outline: 2px solid rgba(123, 30, 58, 0.3); }
 

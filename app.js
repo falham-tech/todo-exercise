@@ -27,8 +27,52 @@ function save() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(todos));
 }
 
+// How long a finger (or mouse button) must rest on a task to open the editor,
+// and how far it may move meanwhile before it counts as scrolling.
+const LONG_PRESS_MS = 500;
+const LONG_PRESS_MOVE_PX = 10;
+
+// Calls onPress once the pointer has rested on target for LONG_PRESS_MS, then
+// onRelease when it is lifted. Moving or lifting earlier cancels. The other
+// listeners sit on the row because onPress may replace target mid-press.
+function addLongPress(row, target, onPress, onRelease) {
+  let timer = null;
+  let startX = 0;
+  let startY = 0;
+  let pressed = false;
+
+  function stop() {
+    clearTimeout(timer);
+    timer = null;
+  }
+
+  target.addEventListener("pointerdown", (e) => {
+    startX = e.clientX;
+    startY = e.clientY;
+    pressed = false;
+    timer = setTimeout(() => {
+      timer = null;
+      pressed = true;
+      onPress();
+    }, LONG_PRESS_MS);
+  });
+  row.addEventListener("pointermove", (e) => {
+    if (timer && Math.hypot(e.clientX - startX, e.clientY - startY) > LONG_PRESS_MOVE_PX) stop();
+  });
+  // The browser sends pointercancel when it takes over the touch for scrolling.
+  row.addEventListener("pointercancel", stop);
+  row.addEventListener("pointerleave", stop);
+  row.addEventListener("pointerup", () => {
+    stop();
+    if (pressed) onRelease();
+    pressed = false;
+  });
+  // Android and desktop browsers would otherwise open a context menu on a long press.
+  target.addEventListener("contextmenu", (e) => e.preventDefault());
+}
+
 // Swaps a task's text for an edit field and a priority dropdown.
-// Enter saves both; Escape or clicking elsewhere restores the old row.
+// Enter or clicking elsewhere saves both; Escape restores the old row.
 function startEdit(li, textSpan, todo) {
   const editor = document.createElement("span");
   editor.className = "edit";
@@ -83,9 +127,9 @@ function startEdit(li, textSpan, todo) {
     if (e.key === "Escape") cancel();
   });
 
-  // Moving focus between the field and the dropdown is fine; anywhere else cancels.
+  // Moving focus between the field and the dropdown is fine; anywhere else saves.
   editor.addEventListener("focusout", (e) => {
-    if (!editor.contains(e.relatedTarget)) cancel();
+    if (!editor.contains(e.relatedTarget)) commit();
   });
 
   editInput.focus();
@@ -122,9 +166,17 @@ function render() {
 
     const text = document.createElement("span");
     text.textContent = todo.text;
-    // Only open tasks can be edited.
+    // Only open tasks can be edited: double-click on desktop, long press on touch screens.
     if (!todo.done) {
       text.addEventListener("dblclick", () => startEdit(li, text, todo));
+      addLongPress(
+        li,
+        text,
+        () => startEdit(li, text, todo),
+        // iOS only opens the keyboard for focus() inside a touch, not from a timer,
+        // so focus the field again when the finger is lifted.
+        () => li.querySelector(".edit-input")?.focus()
+      );
     }
 
     const del = document.createElement("button");
