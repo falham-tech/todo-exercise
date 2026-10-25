@@ -16,6 +16,67 @@ function save() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(todos));
 }
 
+// Swaps a task's text for an edit field and a priority dropdown.
+// Enter saves both; Escape or clicking elsewhere restores the old row.
+function startEdit(li, textSpan, todo) {
+  const editor = document.createElement("span");
+  editor.className = "edit";
+
+  const editInput = document.createElement("input");
+  editInput.type = "text";
+  editInput.className = "edit-input";
+  editInput.value = todo.text;
+
+  const editPriority = document.createElement("select");
+  editPriority.className = "edit-priority";
+  for (const p of ["hoch", "mittel", "niedrig"]) {
+    const option = document.createElement("option");
+    option.value = p;
+    option.textContent = p;
+    editPriority.append(option);
+  }
+  editPriority.value = todo.priority;
+
+  editor.append(editInput, editPriority);
+  textSpan.replaceWith(editor);
+  li.querySelector(".priority-label")?.remove();
+
+  // render() removes the editor, which can fire focusout; only finish once.
+  let finished = false;
+
+  function commit() {
+    if (finished) return;
+    finished = true;
+    const text = editInput.value.trim();
+    // An empty text leaves the task unchanged.
+    if (text) {
+      todo.text = text;
+      todo.priority = editPriority.value;
+      save();
+    }
+    render();
+  }
+
+  function cancel() {
+    if (finished) return;
+    finished = true;
+    render();
+  }
+
+  editor.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") commit();
+    if (e.key === "Escape") cancel();
+  });
+
+  // Moving focus between the field and the dropdown is fine; anywhere else cancels.
+  editor.addEventListener("focusout", (e) => {
+    if (!editor.contains(e.relatedTarget)) cancel();
+  });
+
+  editInput.focus();
+  editInput.select();
+}
+
 function render() {
   list.innerHTML = "";
 
@@ -39,6 +100,10 @@ function render() {
 
     const text = document.createElement("span");
     text.textContent = todo.text;
+    // Only open tasks can be edited.
+    if (!todo.done) {
+      text.addEventListener("dblclick", () => startEdit(li, text, todo));
+    }
 
     const del = document.createElement("button");
     del.className = "delete";
